@@ -19,9 +19,13 @@ const PostModel = db.define('post', {
   views: { type: Sequelize.INTEGER },
 });
 
-AuthorModel.hasMany(PostModel);
-PostModel.belongsTo(AuthorModel);
 
+const PostAuthorAssoc = db.define('assoc_author_post', {
+}, {
+  freezeTableName: true,
+});
+AuthorModel.belongsToMany(PostModel, { foreignKey: 'authorId', through: PostAuthorAssoc });
+PostModel.belongsToMany(AuthorModel, { foreignKey: 'postId', through: PostAuthorAssoc });
 
 casual.seed(123);
 db.sync({ force: true }).then(() => {
@@ -31,16 +35,25 @@ db.sync({ force: true }).then(() => {
       lastName: casual.last_name,
     }).then((author) => {
       _.times(3, () => {
-        return author.createPost({
+        PostModel.create({
           title: `A post by ${author.firstName}`,
           text: casual.sentences(3),
           views: casual.integer(0, 100),
+        }).then(post => {
+          // post.addAuthor(author);
+          author.addPost(post);
         });
+        // return author.createPost({
+        //   title: `A post by ${author.firstName}`,
+        //   text: casual.sentences(3),
+        //   views: casual.integer(0, 100),
+        // });
       });
+      return author;
     });
   });
 });
 
 const Author = db.models.author;
 const Post = db.models.post;
-export { Author, Post };
+export { Author, Post, PostAuthorAssoc };
